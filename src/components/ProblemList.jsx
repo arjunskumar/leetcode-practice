@@ -31,13 +31,14 @@ const ProblemList = () => {
   const [selectedProblem, setSelectedProblem] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState('python');
   const [darkMode, setDarkMode] = useState(false);
-  const [notes, setNotes] = useState({}); // For storing notes for each problem
+  const [notes, setNotes] = useState({});
+  const [selectedTrack, setSelectedTrack] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const problemsRes = await fetch('/problems.json');
-        const solutionsRes = await fetch('/solutions.json');
+        const problemsRes = await fetch(`${import.meta.env.BASE_URL}problems.json`);
+        const solutionsRes = await fetch(`${import.meta.env.BASE_URL}solutions.json`);
 
         if (!problemsRes.ok) throw new Error("Failed to load problems.json");
         if (!solutionsRes.ok) throw new Error("Failed to load solutions.json");
@@ -45,7 +46,6 @@ const ProblemList = () => {
         const problemsData = await problemsRes.json();
         const solutionsData = await solutionsRes.json();
 
-        // Check localStorage for any saved progress and notes
         const savedProgress = JSON.parse(localStorage.getItem('userProgress')) || {};
         const savedNotes = JSON.parse(localStorage.getItem('userNotes')) || {};
         const updatedProblems = problemsData.map(p => ({
@@ -56,7 +56,7 @@ const ProblemList = () => {
 
         setProblems(updatedProblems);
         setSolutions(solutionsData);
-        setNotes(savedNotes); // Load saved notes
+        setNotes(savedNotes);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -65,7 +65,6 @@ const ProblemList = () => {
   }, []);
 
   const saveProgress = () => {
-    // Save the current progress to localStorage
     const progress = problems.reduce((acc, p) => {
       acc[p.id] = { completed: p.completed, starred: p.starred };
       return acc;
@@ -76,17 +75,17 @@ const ProblemList = () => {
   const saveNotes = (id, note) => {
     const updatedNotes = { ...notes, [id]: note };
     setNotes(updatedNotes);
-    localStorage.setItem('userNotes', JSON.stringify(updatedNotes)); // Save notes to localStorage
+    localStorage.setItem('userNotes', JSON.stringify(updatedNotes));
   };
 
   const toggleCompletion = (id) => {
     setProblems(problems.map(p => p.id === id ? { ...p, completed: !p.completed } : p));
-    saveProgress();  // Save progress after each toggle
+    saveProgress();
   };
 
   const toggleStarred = (id) => {
     setProblems(problems.map(p => p.id === id ? { ...p, starred: !p.starred } : p));
-    saveProgress();  // Save progress after each toggle
+    saveProgress();
   };
 
   const groupedProblems = problems.reduce((acc, problem) => {
@@ -98,23 +97,32 @@ const ProblemList = () => {
   const toggleDarkMode = () => {
     setDarkMode(prevMode => {
       const newMode = !prevMode;
-      localStorage.setItem('darkMode', JSON.stringify(newMode)); // Save the theme to localStorage
+      localStorage.setItem('darkMode', JSON.stringify(newMode));
       return newMode;
     });
   };
 
   useEffect(() => {
-    // Check localStorage for saved dark mode preference
     const savedMode = JSON.parse(localStorage.getItem('darkMode'));
     if (savedMode !== null) {
       setDarkMode(savedMode);
     }
   }, []);
 
+  const filteredProblems = problems.filter((problem) => {
+    const matchesTrack = selectedTrack ? problem.track.includes(selectedTrack) : true;
+    const matchesSearch = problem.title.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTrack && matchesSearch;
+  });
+
+  const handleTrackChange = (e) => {
+    setSelectedTrack(e.target.value);
+  };
+
   return (
     <div className={`max-w-6xl mx-auto p-6 ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
       <h1 className={`text-3xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>LeetCode Tracker</h1>
-      
+
       <button
         onClick={toggleDarkMode}
         className={`absolute top-6 right-6 p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}
@@ -122,7 +130,7 @@ const ProblemList = () => {
         {darkMode ? <Moon className="h-5 w-5 text-white" /> : <Sun className="h-5 w-5 text-yellow-500" />}
       </button>
 
-      <ProgressStats problems={problems} darkMode={darkMode} />
+      <ProgressStats problems={filteredProblems} darkMode={darkMode} />
       
       <div className="mb-8 flex gap-4">
         <div className="relative flex-1">
@@ -136,26 +144,38 @@ const ProblemList = () => {
           />
         </div>
       </div>
+
+      <div className="mb-8">
+        <select value={selectedTrack} onChange={handleTrackChange} className="bg-gray-200 p-2 rounded-md">
+          <option value="">All Tracks</option>
+          <option value="< 1 month">{"< 1 month"}</option>
+          <option value="1-3 months">1-3 months</option>
+          <option value="3+ months">3+ months</option>
+        </select>
+      </div>
+
       {Object.entries(groupedProblems).map(([pattern, problems]) => (
         <div key={pattern} className="mt-8">
           <h2 className={`text-2xl font-bold px-4 py-2 rounded-lg shadow-md ${darkMode ? 'bg-gray-700 text-white' : 'bg-blue-100 text-blue-800'}`}>
             {pattern}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-            {problems.map(problem => (
-              <div key={problem.id} className={`border rounded-lg p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white'} shadow hover:shadow-lg transition cursor-pointer`}>
-                <h3 className="text-lg font-semibold" onClick={() => setSelectedProblem(problem)}>{problem.title}</h3>
-                <span className={`px-2 py-1 rounded text-sm ${problem.difficulty === 'Easy' ? 'bg-green-100 text-green-800' : problem.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{problem.difficulty}</span>
-                <div className="flex justify-between mt-2">
-                  <button className={problem.completed ? 'text-green-600' : 'text-gray-400'} onClick={() => toggleCompletion(problem.id)}>
-                    <Check className="h-5 w-5" />
-                  </button>
-                  <button className="text-yellow-600" onClick={() => toggleStarred(problem.id)}>
-                    <Star className={`h-5 w-5 ${problem.starred ? 'fill-yellow-500' : ''}`} />
-                  </button>
+            {filteredProblems
+              .filter(problem => problem.pattern === pattern)
+              .map(problem => (
+                <div key={problem.id} className={`border rounded-lg p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white'} shadow hover:shadow-lg transition cursor-pointer`}>
+                  <h3 className="text-lg font-semibold" onClick={() => setSelectedProblem(problem)}>{problem.title}</h3>
+                  <span className={`px-2 py-1 rounded text-sm ${problem.difficulty === 'Easy' ? 'bg-green-100 text-green-800' : problem.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{problem.difficulty}</span>
+                  <div className="flex justify-between mt-2">
+                    <button className={problem.completed ? 'text-green-600' : 'text-gray-400'} onClick={() => toggleCompletion(problem.id)}>
+                      <Check className="h-5 w-5" />
+                    </button>
+                    <button className="text-yellow-600" onClick={() => toggleStarred(problem.id)}>
+                      <Star className={`h-5 w-5 ${problem.starred ? 'fill-yellow-500' : ''}`} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       ))}
@@ -190,7 +210,6 @@ const ProblemList = () => {
                 <p className={`mt-4 ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                   <strong>Explanation:</strong> {solutions[selectedProblem.id].explanation}
                 </p>
-                {/* Notes Section */}
                 <div className="mt-4">
                   <textarea
                     className={`w-full p-2 rounded-lg ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'} border`}
