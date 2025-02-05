@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "title": "Two Sum",
+    "difficulty": "Easy",
+    "pattern": "Arrays & Hashing",
+    "completed": false,
+    "starred": false,
+    "track": ["3+ months", "1-3 months", "< 1 month"],
+    "languages": ["Python", "Java", "JavaScript"]
+  },
+  {
+    "id": 2,
+    "title": "Valid Anagram",
+    "difficulty": "Easy",
+    "pattern": "Arrays & Hashing",
+    "completed": false,
+    "starred": false,
+    "track": ["3+ months"],
+    "languages": ["Python", "JavaScript"]
+  },
+  {
+    "id": 3,
+    "title": "Contains Duplicate",
+    "difficulty": "Medium",
+    "pattern": "Graphs",
+    "completed": false,
+    "starred": false,
+    "track": ["1-3 months"],
+    "languages": ["Python", "Java"]
+  }
+]
