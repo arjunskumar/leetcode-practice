@@ -1,0 +1,25 @@
+{
+    "1": {
+      "python": "def twoSum(nums: List[int], target: int) -> List[int]:\n    seen = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in seen:\n            return [seen[complement], i]\n        seen[num] = i\n    return []",
+      "cpp": "vector<int> twoSum(vector<int>& nums, int target) {\n    unordered_map<int, int> seen;\n    for(int i = 0; i < nums.size(); i++) {\n        int complement = target - nums[i];\n        if(seen.count(complement))\n            return {seen[complement], i};\n        seen[nums[i]] = i;\n    }\n    return {};\n}",
+      "timeComplexity": "O(n)",
+      "spaceComplexity": "O(n)",
+      "explanation": "Uses a hash map to store previously seen numbers. For each number, checks if its complement exists in the map."
+    },
+    "2": {
+      "python": "def isAnagram(s: str, t: str) -> bool:\n    if len(s) != len(t):\n        return False\n    char_count = {}\n    for c in s:\n        char_count[c] = char_count.get(c, 0) + 1\n    for c in t:\n        if c not in char_count:\n            return False\n        char_count[c] -= 1\n        if char_count[c] == 0:\n            del char_count[c]\n    return len(char_count) == 0",
+      "cpp": "bool isAnagram(string s, string t) {\n    if(s.length() != t.length()) return false;\n    vector<int> count(26, 0);\n    for(char c : s) count[c - 'a']++;\n    for(char c : t) {\n        count[c - 'a']--;\n        if(count[c - 'a'] < 0) return false;\n    }\n    return true;\n}",
+      "timeComplexity": "O(n)",
+      "spaceComplexity": "O(1)",
+      "explanation": "Uses a hash map/array to count character frequencies. Compare frequencies between strings."
+    },
+    "3": {
+      "python": "def isAnagram(s: str, t: str) -> bool:\n    if len(s) != len(t):\n        return False\n    char_count = {}\n    for c in s:\n        char_count[c] = char_count.get(c, 0) + 1\n    for c in t:\n        if c not in char_count:\n            return False\n        char_count[c] -= 1\n        if char_count[c] == 0:\n            del char_count[c]\n    return len(char_count) == 0",
+      "cpp": "bool isAnagram(string s, string t) {\n    if(s.length() != t.length()) return false;\n    vector<int> count(26, 0);\n    for(char c : s) count[c - 'a']++;\n    for(char c : t) {\n        count[c - 'a']--;\n        if(count[c - 'a'] < 0) return false;\n    }\n    return true;\n}",
+      "timeComplexity": "O(n)",
+      "spaceComplexity": "O(1)",
+      "explanation": "Uses a hash map/array to count character frequencies. Compare frequencies between strings."
+    }
+
+  }
+  
