@@ -204,9 +204,13 @@ const ProblemList = () => {
                     C++
                   </button>
                 </div>
-                <pre className={`bg-gray-800 text-white p-4 rounded-lg overflow-x-auto max-h-96 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                  <code>{solutions[selectedProblem.id][selectedLanguage]}</code>
-                </pre>
+                <pre className={`p-4 rounded-lg overflow-x-auto max-h-96 border ${
+                  darkMode
+                    ? 'bg-gray-800 text-white border-gray-600'
+                    : 'bg-gray-100 text-gray-900 border-gray-300'
+                  }`}>
+                <code>{solutions[selectedProblem.id][selectedLanguage]}</code>
+              </pre>
                 <p className={`mt-4 ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                   <strong>Explanation:</strong> {solutions[selectedProblem.id].explanation}
                 </p>
