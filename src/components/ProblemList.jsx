@@ -84,7 +84,7 @@ const ProblemList = () => {
   }, {});
 
   return (
-    <div className={`max-w-6xl mx-auto p-6 ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+    <div className={`max-w-6xl mx-auto p-6 ${darkMode ? 'bg-gray-900' : 'bg-white'} relative`}>
       <h1 className={`text-3xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
         LeetCode Tracker
       </h1>
