@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ChevronDown, Star, Check, X, Sun, Moon } from 'lucide-react';
 
+
 const ProgressStats = ({ problems, darkMode }) => {
   const totalProblems = problems.length;
   const completedProblems = problems.filter(p => p.completed).length;
@@ -19,6 +20,33 @@ const ProgressStats = ({ problems, darkMode }) => {
       <div className={`p-4 rounded-lg shadow ${darkMode ? 'bg-gray-700' : 'bg-white'}`}>
         <h3 className="text-lg font-semibold">To Review</h3>
         <p className="text-2xl font-bold text-yellow-600">{starredProblems}</p>
+      </div>
+    </div>
+  );
+};
+
+// Add this after ProgressStats component
+const PatternProgress = ({ problems, pattern, darkMode }) => {
+  const patternProblems = problems.filter(p => p.pattern === pattern);
+  const completedCount = patternProblems.filter(p => p.completed).length;
+  const totalCount = patternProblems.length;
+  const percentage = (completedCount / totalCount) * 100;
+
+  return (
+    <div className="mt-2 mb-4">
+      <div className="flex justify-between mb-1">
+        <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          Progress: {completedCount}/{totalCount}
+        </span>
+        <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          {percentage.toFixed(1)}%
+        </span>
+      </div>
+      <div className={`h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+        <div
+          className="h-full rounded-full bg-green-500 transition-all duration-300"
+          style={{ width: `${percentage}%` }}
+        />
       </div>
     </div>
   );
@@ -163,11 +191,16 @@ const ProblemList = () => {
         </select>
       </div>
 
-      {Object.entries(groupedProblems).map(([pattern, problems]) => (
+      {Object.entries(groupedProblems).map(([pattern, problems]) => (     
         <div key={pattern} className="mt-8">
           <h2 className={`text-2xl font-bold px-4 py-2 rounded-lg shadow-md ${darkMode ? 'bg-gray-700 text-white' : 'bg-blue-100 text-blue-800'}`}>
-            {pattern}
+          {pattern}
           </h2>
+          <PatternProgress 
+            problems={problems}
+            pattern={pattern}
+            darkMode={darkMode}
+          />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
             {filteredProblems
               .filter(problem => problem.pattern === pattern)
