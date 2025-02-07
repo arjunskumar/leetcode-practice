@@ -107,6 +107,15 @@ const ProblemList = () => {
     if (savedMode !== null) {
       setDarkMode(savedMode);
     }
+
+    const handleEsc = (event) => {
+      if (event.key === 'Escape') {
+        setSelectedProblem(null);
+      }
+    };
+    
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
   const filteredProblems = problems.filter((problem) => {
