@@ -61,6 +61,7 @@ const ProblemList = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [notes, setNotes] = useState({});
   const [selectedTrack, setSelectedTrack] = useState('');
+  const [reviewDates, setReviewDates] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,6 +82,9 @@ const ProblemList = () => {
           completed: savedProgress[p.id]?.completed || false,
           starred: savedProgress[p.id]?.starred || false,
         }));
+
+        const savedReviewDates = JSON.parse(localStorage.getItem('reviewDates')) || {};
+        setReviewDates(savedReviewDates);
 
         setProblems(updatedProblems);
         setSolutions(solutionsData);
@@ -114,6 +118,49 @@ const ProblemList = () => {
   const toggleStarred = (id) => {
     setProblems(problems.map(p => p.id === id ? { ...p, starred: !p.starred } : p));
     saveProgress();
+  };
+
+    const scheduleNextReview = (problemId, performance) => {
+    console.log('Review scheduled:', { problemId, performance });
+    const now = new Date();
+    const currentInterval = reviewDates[problemId]?.interval || 1;
+    
+    let nextInterval;
+    if (performance >= 4) {
+      nextInterval = Math.min(currentInterval * 2, 60); // Cap at 60 days
+    } else if (performance >= 2) {
+      nextInterval = currentInterval;
+    } else {
+      nextInterval = Math.max(1, Math.floor(currentInterval / 2));
+    }
+  
+    const nextReview = new Date(now.getTime() + (nextInterval * 24 * 60 * 60 * 1000));
+    
+    const updatedReviewDates = {
+      ...reviewDates,
+      [problemId]: {
+        nextReview: nextReview.toISOString(),
+        interval: nextInterval
+      }
+    };
+    
+    setReviewDates(updatedReviewDates);
+    localStorage.setItem('reviewDates', JSON.stringify(updatedReviewDates));
+    console.log('Saved review dates:', JSON.parse(localStorage.getItem('reviewDates')));
+
+  };
+
+  const getDueReviews = () => {
+
+    // For testing: return first 3 problems as due
+    // return problems.slice(0, 3);
+  
+    const now = new Date();
+    return problems.filter(problem => {
+      const review = reviewDates[problem.id];
+      if (!review) return false;
+      return new Date(review.nextReview) <= now;
+    });
   };
 
   const groupedProblems = problems.reduce((acc, problem) => {
@@ -156,10 +203,29 @@ const ProblemList = () => {
     setSelectedTrack(e.target.value);
   };
 
+  const dueReviews = getDueReviews();
+
   return (
     <div className={`max-w-6xl mx-auto p-6 ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
       <h1 className={`text-3xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>LeetCode Tracker</h1>
-
+      {dueReviews.length > 0 && (
+      <div className={`mb-6 p-4 rounded-lg ${darkMode ? 'bg-blue-900' : 'bg-blue-100'}`}>
+        <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-blue-800'}`}>
+          {dueReviews.length} problems due for review
+        </h2>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {dueReviews.map(problem => (
+            <button
+              key={problem.id}
+              onClick={() => setSelectedProblem(problem)}
+              className="px-3 py-1 rounded-lg bg-blue-500 text-white hover:bg-blue-600"
+            >
+              {problem.title}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
       <button
         onClick={toggleDarkMode}
         className={`absolute top-6 right-6 p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}
@@ -265,6 +331,26 @@ const ProblemList = () => {
                     onChange={(e) => saveNotes(selectedProblem.id, e.target.value)}
                   />
                 </div>
+                <div className="mt-4">
+                <p className="mb-2">Rate your understanding:</p>
+                <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <button
+                    key={rating}
+                    onClick={() => {
+                      scheduleNextReview(selectedProblem.id, rating);
+                      // Add feedback
+                      alert(`Rating ${rating} recorded for ${selectedProblem.title}`);
+                    }}
+                    className={`px-4 py-2 rounded-lg ${
+                      darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    {rating}
+                  </button>
+                ))}
+                </div>
+              </div>
               </div>
             )}
           </div>
