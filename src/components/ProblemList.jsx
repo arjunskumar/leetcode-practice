@@ -5,6 +5,7 @@ import SearchBar from './SearchBar';
 import PatternProgress from './PatternProgress';
 import ProgressStats from './ProgressStats';
 import ProblemCard from './ProblemCard';
+import LandingPage from './LandingPage';
 import useLocalStorage from '../hooks/useLocalStorage';
 import useProblemData from '../hooks/useProblemData';
 
@@ -128,6 +129,17 @@ const ProblemList = () => {
     );
   }
 
+  // Show landing page
+  if (showLanding) {
+    return (
+      <LandingPage 
+        onGetStarted={() => setShowLanding(false)}
+        problems={problems}
+      />
+    );
+  }
+
+  // Main app content
   return (
     <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-6xl mx-auto p-6">
