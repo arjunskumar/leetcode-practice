@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, ChevronDown, ChevronRight } from 'lucide-react';
 import ProblemModal from './ProblemModal';
 import SearchBar from './SearchBar';
-import PatternProgress from './PatternProgress';
 import ProgressStats from './ProgressStats';
 import ProblemCard from './ProblemCard';
 import LandingPage from './LandingPage';
@@ -28,15 +27,22 @@ const ProblemList = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('python');
   const [darkMode, setDarkMode] = useLocalStorage('darkMode', false);
   const [selectedTrack, setSelectedTrack] = useState('');
+  const [collapsedSections, setCollapsedSections] = useState({});
 
-  // Memoized handlers
+  const toggleSection = (pattern) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [pattern]: !prev[pattern]
+    }));
+  };
+
+  // Handlers remain the same...
   const handleToggleCompletion = useCallback((id) => {
     setProblems(prevProblems => {
       const updatedProblems = prevProblems.map(p => 
         p.id === id ? { ...p, completed: !p.completed } : p
       );
       
-      // Update localStorage
       const progress = updatedProblems.reduce((acc, p) => ({
         ...acc,
         [p.id]: { completed: p.completed, starred: p.starred }
@@ -93,7 +99,6 @@ const ProblemList = () => {
     });
   }, [setReviewDates]);
 
-  // Memoized filtered and grouped problems
   const filteredAndGroupedProblems = useMemo(() => {
     const filtered = problems.filter(problem => {
       const matchesTrack = selectedTrack ? problem.track.includes(selectedTrack) : true;
@@ -108,7 +113,19 @@ const ProblemList = () => {
     }, {});
   }, [problems, selectedTrack, searchQuery]);
 
-  // Error handling
+  // Initialize collapsed state for new patterns
+  useEffect(() => {
+    const patterns = Object.keys(filteredAndGroupedProblems);
+    const initialCollapsed = patterns.reduce((acc, pattern) => ({
+      ...acc,
+      [pattern]: true // Set to true for initially collapsed
+    }), {});
+    setCollapsedSections(prev => ({
+      ...initialCollapsed,
+      ...prev
+    }));
+  }, [filteredAndGroupedProblems]);
+
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -120,7 +137,6 @@ const ProblemList = () => {
     );
   }
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -129,7 +145,6 @@ const ProblemList = () => {
     );
   }
 
-  // Show landing page
   if (showLanding) {
     return (
       <LandingPage 
@@ -139,7 +154,6 @@ const ProblemList = () => {
     );
   }
 
-  // Main app content
   return (
     <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-6xl mx-auto p-6">
@@ -176,36 +190,65 @@ const ProblemList = () => {
         />
 
         <div className="space-y-8">
-          {Object.entries(filteredAndGroupedProblems).map(([pattern, patternProblems]) => (
-            <section key={pattern} aria-labelledby={`pattern-${pattern}`}>
-              <h2 
-                id={`pattern-${pattern}`}
-                className={`text-2xl font-bold px-4 py-2 rounded-lg shadow-md ${
-                  darkMode ? 'bg-gray-700 text-white' : 'bg-blue-100 text-blue-800'
-                }`}
-              >
-                {pattern}
-              </h2>
-              
-              <PatternProgress 
-                problems={patternProblems}
-                darkMode={darkMode}
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                {patternProblems.map(problem => (
-                  <ProblemCard
-                    key={problem.id}
-                    problem={problem}
-                    onToggleCompletion={handleToggleCompletion}
-                    onToggleStarred={handleToggleStarred}
-                    onSelect={setSelectedProblem}
-                    darkMode={darkMode}
+          {Object.entries(filteredAndGroupedProblems).map(([pattern, patternProblems]) => {
+            const completedCount = patternProblems.filter(p => p.completed).length;
+            const progressPercent = (completedCount / patternProblems.length) * 100;
+            
+            let bgColor;
+            if (progressPercent === 100) {
+              bgColor = darkMode ? 'bg-green-700' : 'bg-green-100';
+            } else if (progressPercent > 50) {
+              bgColor = darkMode ? 'bg-yellow-700' : 'bg-yellow-100';
+            } else {
+              bgColor = darkMode ? 'bg-gray-700' : 'bg-blue-100';
+            }
+
+            return (
+              <section key={pattern} aria-labelledby={`pattern-${pattern}`}>
+                <div className="relative">
+                  <div 
+                    className="absolute inset-0 bg-green-500 opacity-20 rounded-lg transition-all duration-300" 
+                    style={{ width: `${progressPercent}%` }}
                   />
-                ))}
-              </div>
-            </section>
-          ))}
+                  <button 
+                    onClick={() => toggleSection(pattern)}
+                    className="w-full flex items-center justify-between text-left px-4 py-2 rounded-lg shadow-md relative z-10 hover:bg-opacity-50"
+                  >
+                    <h2 
+                      id={`pattern-${pattern}`}
+                      className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                    >
+                      {pattern}
+                    </h2>
+                    <div className="flex items-center gap-4">
+                      <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
+                        {completedCount}/{patternProblems.length}
+                      </span>
+                      {collapsedSections[pattern] ? 
+                        <ChevronRight className="h-6 w-6" /> : 
+                        <ChevronDown className="h-6 w-6" />
+                      }
+                    </div>
+                  </button>
+                </div>
+                
+                {!collapsedSections[pattern] && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                    {patternProblems.map(problem => (
+                      <ProblemCard
+                        key={problem.id}
+                        problem={problem}
+                        onToggleCompletion={handleToggleCompletion}
+                        onToggleStarred={handleToggleStarred}
+                        onSelect={setSelectedProblem}
+                        darkMode={darkMode}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
 
         {selectedProblem && (
