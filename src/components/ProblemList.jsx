@@ -207,12 +207,12 @@ const ProblemList = () => {
               <section key={pattern} aria-labelledby={`pattern-${pattern}`}>
                 <div className="relative">
                   <div 
-                    className="absolute inset-0 bg-green-500 opacity-20 rounded-lg transition-all duration-300" 
+                    className={`absolute inset-0 ${darkMode ? 'bg-green-600' : 'bg-green-200'} rounded-lg transition-all duration-300`}
                     style={{ width: `${progressPercent}%` }}
                   />
                   <button 
                     onClick={() => toggleSection(pattern)}
-                    className="w-full flex items-center justify-between text-left px-4 py-2 rounded-lg shadow-md relative z-10 hover:bg-opacity-50"
+                    className={`w-full flex items-center justify-between text-left px-4 py-2 rounded-lg shadow-md relative z-10 ${darkMode ? 'bg-gray-800 bg-opacity-50' : 'bg-white bg-opacity-50'} hover:bg-opacity-75 transition-all duration-200`}
                   >
                     <h2 
                       id={`pattern-${pattern}`}
@@ -224,10 +224,12 @@ const ProblemList = () => {
                       <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
                         {completedCount}/{patternProblems.length}
                       </span>
-                      {collapsedSections[pattern] ? 
-                        <ChevronRight className="h-6 w-6" /> : 
-                        <ChevronDown className="h-6 w-6" />
-                      }
+                      <div className={`${darkMode ? 'text-white' : 'text-gray-600'}`}>
+                        {collapsedSections[pattern] ? 
+                          <ChevronRight className="h-6 w-6" /> : 
+                          <ChevronDown className="h-6 w-6" />
+                        }
+                      </div>
                     </div>
                   </button>
                 </div>
