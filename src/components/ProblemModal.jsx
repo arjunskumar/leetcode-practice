@@ -2,31 +2,29 @@ import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 const ProblemModal = ({ problem, solution, language, notes, darkMode, onClose, onLanguageChange, onSaveNotes, onRating }) => {
-  // Add effect to handle Escape key press
   useEffect(() => {
     const handleEscapeKey = (event) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
+      if (event.key === 'Escape') onClose();
     };
-
-    // Add event listener when component mounts
     document.addEventListener('keydown', handleEscapeKey);
-
-    // Clean up event listener when component unmounts
-    return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
+    return () => document.removeEventListener('keydown', handleEscapeKey);
   }, [onClose]);
+
+  const getRatingColor = (rating) => {
+    const colors = {
+      1: 'from-red-500 to-red-600',
+      2: 'from-orange-500 to-orange-600',
+      3: 'from-yellow-500 to-yellow-600',
+      4: 'from-lime-500 to-lime-600',
+      5: 'from-green-500 to-green-600'
+    };
+    return colors[rating];
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div className={`p-8 rounded-lg shadow-lg max-w-3xl w-full relative ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
-        <button 
-          className="absolute top-2 right-2 text-sm" 
-          onClick={onClose}
-          aria-label="Close modal (ESC)"
-        >
+        <button className="absolute top-2 right-2 text-sm" onClick={onClose} aria-label="Close modal (ESC)">
           ESC
         </button>
         <h2 className="text-xl font-bold mb-4">{problem.title}</h2>
@@ -75,8 +73,12 @@ const ProblemModal = ({ problem, solution, language, notes, darkMode, onClose, o
                   <button
                     key={rating}
                     onClick={() => onRating(problem.id, rating)}
-                    className={`px-4 py-2 rounded-lg ${
-                      darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                    className={`px-4 py-2 rounded-lg text-white ${
+                      rating === 1 ? 'bg-red-600 hover:bg-red-500' :
+                      rating === 2 ? 'bg-orange-500 hover:bg-orange-400' :
+                      rating === 3 ? 'bg-yellow-500 hover:bg-yellow-400' :
+                      rating === 4 ? 'bg-lime-500 hover:bg-lime-400' :
+                      'bg-green-600 hover:bg-green-500'
                     }`}
                   >
                     {rating}
