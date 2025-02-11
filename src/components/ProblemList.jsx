@@ -7,6 +7,7 @@ import ProblemCard from './ProblemCard';
 import LandingPage from './LandingPage';
 import useLocalStorage from '../hooks/useLocalStorage';
 import useProblemData from '../hooks/useProblemData';
+import Toast from './Toast';
 
 const ProblemList = () => {
   const { 
@@ -20,7 +21,12 @@ const ProblemList = () => {
     isLoading,
     error 
   } = useProblemData();
-  
+   // Add toast state
+  const [toast, setToast] = useState({
+  show: false,
+  message: '',
+  type: 'success'
+  });
   const [showLanding, setShowLanding] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProblem, setSelectedProblem] = useState(null);
@@ -36,12 +42,30 @@ const ProblemList = () => {
     }));
   };
 
-  // Handlers remain the same...
+  // Show toast helper function
+  const showToast = (message, type = 'success') => {
+    setToast({
+      show: true,
+      message,
+      type
+    });
+  };
+
+  
   const handleToggleCompletion = useCallback((id) => {
     setProblems(prevProblems => {
-      const updatedProblems = prevProblems.map(p => 
-        p.id === id ? { ...p, completed: !p.completed } : p
-      );
+      const updatedProblems = prevProblems.map(p => {
+        if (p.id === id) {
+          const newCompleted = !p.completed;
+          // Show appropriate toast message
+          showToast(
+            newCompleted ? 'Problem marked as completed! 🎉' : 'Problem marked as incomplete',
+            'success'
+          );
+          return { ...p, completed: newCompleted };
+        }
+        return p;
+      });
       
       const progress = updatedProblems.reduce((acc, p) => ({
         ...acc,
@@ -51,13 +75,22 @@ const ProblemList = () => {
       
       return updatedProblems;
     });
-  }, [setProblems]);
+  }, []);
+
 
   const handleToggleStarred = useCallback((id) => {
     setProblems(prevProblems => {
-      const updatedProblems = prevProblems.map(p => 
-        p.id === id ? { ...p, starred: !p.starred } : p
-      );
+      const updatedProblems = prevProblems.map(p => {
+        if (p.id === id) {
+          const newStarred = !p.starred;
+          showToast(
+            newStarred ? 'Added to review list ⭐' : 'Removed from review list',
+            'success'
+          );
+          return { ...p, starred: newStarred };
+        }
+        return p;
+      });
       
       const progress = updatedProblems.reduce((acc, p) => ({
         ...acc,
@@ -67,15 +100,16 @@ const ProblemList = () => {
       
       return updatedProblems;
     });
-  }, [setProblems]);
+  }, []);
 
   const handleSaveNotes = useCallback((id, note) => {
     setNotes(prevNotes => {
       const updatedNotes = { ...prevNotes, [id]: note };
       localStorage.setItem('userNotes', JSON.stringify(updatedNotes));
+      showToast('Notes saved successfully 📝');
       return updatedNotes;
     });
-  }, [setNotes]);
+  }, []);
 
   const handleScheduleReview = useCallback((problemId, rating) => {
     const now = new Date();
@@ -95,9 +129,10 @@ const ProblemList = () => {
       };
       
       localStorage.setItem('reviewDates', JSON.stringify(updatedReviewDates));
+      showToast(`Next review scheduled for ${nextReview.toLocaleDateString()} 📅`);
       return updatedReviewDates;
     });
-  }, [setReviewDates]);
+  }, []);
 
   const filteredAndGroupedProblems = useMemo(() => {
     const filtered = problems.filter(problem => {
@@ -189,6 +224,7 @@ const ProblemList = () => {
           darkMode={darkMode}
         />
 
+
         <div className="space-y-8">
           {Object.entries(filteredAndGroupedProblems).map(([pattern, patternProblems]) => {
             const completedCount = patternProblems.filter(p => p.completed).length;
@@ -266,6 +302,14 @@ const ProblemList = () => {
             onRating={handleScheduleReview}
           />
         )}
+
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(prev => ({ ...prev, show: false }))}
+        />
+      )}
       </div>
     </div>
   );
