@@ -8,6 +8,7 @@ import LandingPage from './LandingPage';
 import useLocalStorage from '../hooks/useLocalStorage';
 import useProblemData from '../hooks/useProblemData';
 import Toast from './Toast';
+import StudyPlanGenerator from './StudyPlanGenerator';
 
 const ProblemList = () => {
   const { 
@@ -223,7 +224,13 @@ const ProblemList = () => {
           onTrackChange={setSelectedTrack}
           darkMode={darkMode}
         />
-
+        {/* Add the StudyPlanGenerator here */}
+        <div className="mb-8">
+          <StudyPlanGenerator 
+            problems={problems}
+            darkMode={darkMode}
+          />
+        </div>
 
         <div className="space-y-8">
           {Object.entries(filteredAndGroupedProblems).map(([pattern, patternProblems]) => {
