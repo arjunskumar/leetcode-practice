@@ -9,6 +9,7 @@ import useLocalStorage from '../hooks/useLocalStorage';
 import useProblemData from '../hooks/useProblemData';
 import Toast from './Toast';
 import StudyPlanGenerator from './StudyPlanGenerator';
+import ModeSelector from './ModeSelector';
 
 const ProblemList = () => {
   const { 
@@ -35,6 +36,7 @@ const ProblemList = () => {
   const [darkMode, setDarkMode] = useLocalStorage('darkMode', false);
   const [selectedTrack, setSelectedTrack] = useState('');
   const [collapsedSections, setCollapsedSections] = useState({});
+  const [learningMode, setLearningMode] = useLocalStorage('learningMode', 'self-paced');
 
   const toggleSection = (pattern) => {
     setCollapsedSections(prev => ({
@@ -224,77 +226,87 @@ const ProblemList = () => {
           onTrackChange={setSelectedTrack}
           darkMode={darkMode}
         />
-        {/* Add the StudyPlanGenerator here */}
-        <div className="mb-8">
-          <StudyPlanGenerator 
-            problems={problems}
-            darkMode={darkMode}
-          />
-        </div>
+        
+        <ModeSelector
+          selectedMode={learningMode}
+          onModeSelect={setLearningMode}
+          darkMode={darkMode}
+        />
 
-        <div className="space-y-8">
-          {Object.entries(filteredAndGroupedProblems).map(([pattern, patternProblems]) => {
-            const completedCount = patternProblems.filter(p => p.completed).length;
-            const progressPercent = (completedCount / patternProblems.length) * 100;
-            
-            let bgColor;
-            if (progressPercent === 100) {
-              bgColor = darkMode ? 'bg-green-700' : 'bg-green-100';
-            } else if (progressPercent > 50) {
-              bgColor = darkMode ? 'bg-yellow-700' : 'bg-yellow-100';
-            } else {
-              bgColor = darkMode ? 'bg-gray-700' : 'bg-blue-100';
-            }
+        
+        {/* Conditionally render based on selected mode */}
+        {learningMode === 'guided' ? (
+          <div className="mb-8">
+            <StudyPlanGenerator 
+              problems={problems}
+              darkMode={darkMode}
+            />
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {Object.entries(filteredAndGroupedProblems).map(([pattern, patternProblems]) => {
+              const completedCount = patternProblems.filter(p => p.completed).length;
+              const progressPercent = (completedCount / patternProblems.length) * 100;
+              
+              let bgColor;
+              if (progressPercent === 100) {
+                bgColor = darkMode ? 'bg-green-700' : 'bg-green-100';
+              } else if (progressPercent > 50) {
+                bgColor = darkMode ? 'bg-yellow-700' : 'bg-yellow-100';
+              } else {
+                bgColor = darkMode ? 'bg-gray-700' : 'bg-blue-100';
+              }
 
-            return (
-              <section key={pattern} aria-labelledby={`pattern-${pattern}`}>
-                <div className="relative">
-                  <div 
-                    className={`absolute inset-0 ${darkMode ? 'bg-green-600' : 'bg-green-200'} rounded-lg transition-all duration-300`}
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                  <button 
-                    onClick={() => toggleSection(pattern)}
-                    className={`w-full flex items-center justify-between text-left px-4 py-2 rounded-lg shadow-md relative z-10 ${darkMode ? 'bg-gray-800 bg-opacity-50' : 'bg-white bg-opacity-50'} hover:bg-opacity-75 transition-all duration-200`}
-                  >
-                    <h2 
-                      id={`pattern-${pattern}`}
-                      className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}
+              return (
+                <section key={pattern} aria-labelledby={`pattern-${pattern}`}>
+                  <div className="relative">
+                    <div 
+                      className={`absolute inset-0 ${darkMode ? 'bg-green-600' : 'bg-green-200'} rounded-lg transition-all duration-300`}
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                    <button 
+                      onClick={() => toggleSection(pattern)}
+                      className={`w-full flex items-center justify-between text-left px-4 py-2 rounded-lg shadow-md relative z-10 ${darkMode ? 'bg-gray-800 bg-opacity-50' : 'bg-white bg-opacity-50'} hover:bg-opacity-75 transition-all duration-200`}
                     >
-                      {pattern}
-                    </h2>
-                    <div className="flex items-center gap-4">
-                      <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                        {completedCount}/{patternProblems.length}
-                      </span>
-                      <div className={`${darkMode ? 'text-white' : 'text-gray-600'}`}>
-                        {collapsedSections[pattern] ? 
-                          <ChevronRight className="h-6 w-6" /> : 
-                          <ChevronDown className="h-6 w-6" />
-                        }
+                      <h2 
+                        id={`pattern-${pattern}`}
+                        className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                      >
+                        {pattern}
+                      </h2>
+                      <div className="flex items-center gap-4">
+                        <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
+                          {completedCount}/{patternProblems.length}
+                        </span>
+                        <div className={`${darkMode ? 'text-white' : 'text-gray-600'}`}>
+                          {collapsedSections[pattern] ? 
+                            <ChevronRight className="h-6 w-6" /> : 
+                            <ChevronDown className="h-6 w-6" />
+                          }
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                </div>
-                
-                {!collapsedSections[pattern] && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                    {patternProblems.map(problem => (
-                      <ProblemCard
-                        key={problem.id}
-                        problem={problem}
-                        onToggleCompletion={handleToggleCompletion}
-                        onToggleStarred={handleToggleStarred}
-                        onSelect={setSelectedProblem}
-                        darkMode={darkMode}
-                      />
-                    ))}
+                    </button>
                   </div>
-                )}
-              </section>
-            );
-          })}
-        </div>
+                  
+                  {!collapsedSections[pattern] && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                      {patternProblems.map(problem => (
+                        <ProblemCard
+                          key={problem.id}
+                          problem={problem}
+                          onToggleCompletion={handleToggleCompletion}
+                          onToggleStarred={handleToggleStarred}
+                          onSelect={setSelectedProblem}
+                          darkMode={darkMode}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        )}
 
         {selectedProblem && (
           <ProblemModal
