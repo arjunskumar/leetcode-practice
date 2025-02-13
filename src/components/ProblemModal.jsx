@@ -2,11 +2,9 @@ import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 const CodeHighlighter = ({ code, language, darkMode }) => {
-  // Basic syntax highlighting rules
   const highlightCode = (code) => {
     if (!code) return '';
     
-    // Common keywords for both Python and C++
     const keywords = [
       'def', 'class', 'return', 'if', 'else', 'elif', 'for', 'while', 'break', 
       'continue', 'True', 'False', 'None', 'and', 'or', 'not', 'in', 'is',
@@ -14,44 +12,88 @@ const CodeHighlighter = ({ code, language, darkMode }) => {
       'public', 'private', 'protected', 'template', 'typename'
     ];
 
-    // Split code into lines for better handling
+    // Create a temporary element to safely escape HTML
+    const escapeHTML = (str) => {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    };
+
     return code.split('\n').map((line, i) => {
-      // Handle comments
-      if (language === 'python' && line.trim().startsWith('#')) {
-        return `<span class="text-green-400">${line}</span>`;
+      // Escape HTML first to prevent XSS
+      let processedLine = escapeHTML(line);
+
+      // Handle comments first
+      if (language === 'python' && processedLine.trim().startsWith('#')) {
+        return `<span class="text-green-400">${processedLine}</span>`;
       }
-      if (language === 'cpp' && (line.trim().startsWith('//') || line.trim().startsWith('/*'))) {
-        return `<span class="text-green-400">${line}</span>`;
+      if (language === 'cpp' && (processedLine.trim().startsWith('//') || processedLine.trim().startsWith('/*'))) {
+        return `<span class="text-green-400">${processedLine}</span>`;
       }
 
-      // Handle strings
-      line = line.replace(
-        /("[^"]*"|'[^']*')/g,
-        '<span class="text-yellow-400">$1</span>'
-      );
+      // Store already highlighted portions to prevent re-processing
+      const highlightedSegments = [];
+      let currentIndex = 0;
+
+      // Function to add a highlighted segment
+      const addHighlight = (start, end, className, content) => {
+        if (start > currentIndex) {
+          highlightedSegments.push(processedLine.substring(currentIndex, start));
+        }
+        highlightedSegments.push(`<span class="${className}">${content}</span>`);
+        currentIndex = end;
+      };
+
+      // Handle string literals
+      const stringRegex = language === 'python' 
+        ? /"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g
+        : /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g;
+
+      let match;
+      while ((match = stringRegex.exec(processedLine)) !== null) {
+        addHighlight(match.index, match.index + match[0].length, 'text-yellow-400', match[0]);
+      }
+
+      // Reset currentIndex for next pass if no strings were found
+      if (currentIndex === 0) {
+        currentIndex = 0;
+      }
 
       // Handle numbers
-      line = line.replace(
-        /\b(\d+(\.\d+)?)\b/g,
-        '<span class="text-purple-400">$1</span>'
-      );
+      const numberRegex = /\b(\d*\.?\d+([eE][+-]?\d+)?[fFlL]?|\d+[uUlL]*|0x[0-9a-fA-F]+|0b[01]+)\b/g;
+      while ((match = numberRegex.exec(processedLine)) !== null) {
+        // Skip if this part is already inside a string highlight
+        if (!highlightedSegments.some(seg => seg.includes(match.index))) {
+          addHighlight(match.index, match.index + match[0].length, 'text-purple-400', match[0]);
+        }
+      }
 
       // Handle keywords
       keywords.forEach(keyword => {
-        const regex = new RegExp(`\\b${keyword}\\b`, 'g');
-        line = line.replace(
-          regex,
-          `<span class="text-blue-400">${keyword}</span>`
-        );
+        const keywordRegex = new RegExp(`\\b${keyword}\\b`, 'g');
+        while ((match = keywordRegex.exec(processedLine)) !== null) {
+          // Skip if this part is already highlighted
+          if (!highlightedSegments.some(seg => seg.includes(match.index))) {
+            addHighlight(match.index, match.index + keyword.length, 'text-blue-400', keyword);
+          }
+        }
       });
 
       // Handle function calls
-      line = line.replace(
-        /\b(\w+)\(/g,
-        '<span class="text-yellow-200">$1</span>('
-      );
+      const functionRegex = /\b(\w+)(?=\()/g;
+      while ((match = functionRegex.exec(processedLine)) !== null) {
+        // Skip if this part is already highlighted
+        if (!highlightedSegments.some(seg => seg.includes(match.index))) {
+          addHighlight(match.index, match.index + match[0].length, 'text-yellow-200', match[0]);
+        }
+      }
 
-      return line;
+      // Add any remaining unhighlighted text
+      if (currentIndex < processedLine.length) {
+        highlightedSegments.push(processedLine.substring(currentIndex));
+      }
+
+      return highlightedSegments.join('');
     }).join('\n');
   };
 
@@ -71,37 +113,53 @@ const CodeHighlighter = ({ code, language, darkMode }) => {
   );
 };
 
-const ProblemModal = ({ problem, solution, language, notes, darkMode, onClose, onLanguageChange, onSaveNotes, onRating }) => {
+const ProblemModal = ({ 
+  problem, 
+  solution, 
+  language, 
+  notes, 
+  darkMode, 
+  onClose, 
+  onLanguageChange, 
+  onSaveNotes, 
+  onRating 
+}) => {
   useEffect(() => {
     const handleEscapeKey = (event) => {
       if (event.key === 'Escape') onClose();
     };
+    
     document.addEventListener('keydown', handleEscapeKey);
     return () => document.removeEventListener('keydown', handleEscapeKey);
   }, [onClose]);
 
+  if (!problem) return null;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 overflow-y-auto">
-      <div className={`p-8 rounded-lg shadow-lg max-w-4xl w-full relative ${
-        darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-      }`}>
+      <div 
+        className={`p-8 rounded-lg shadow-lg max-w-4xl w-full relative ${
+          darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
+        }`}
+      >
         <button 
-          className="absolute top-2 right-2 text-sm hover:opacity-75 transition-opacity" 
-          onClick={onClose} 
-          aria-label="Close modal (ESC)"
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-opacity-80 transition-colors"
+          aria-label="Close modal"
         >
-          ESC
+          <X className="w-5 h-5" />
         </button>
         
         <h2 className="text-2xl font-bold mb-4">{problem.title}</h2>
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <p><strong>Pattern:</strong> {problem.pattern}</p>
           <p><strong>Difficulty:</strong> {problem.difficulty}</p>
         </div>
         
         {solution && (
-          <div>
-            <div className="flex gap-4 mb-4">
+          <div className="space-y-6">
+            <div className="flex gap-4">
               <button 
                 onClick={() => onLanguageChange('python')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
@@ -128,8 +186,8 @@ const ProblemModal = ({ problem, solution, language, notes, darkMode, onClose, o
               </button>
             </div>
             
-            <div className={`rounded-lg overflow-hidden ${
-              darkMode ? 'bg-gray-900' : 'bg-gray-50'
+            <div className={`rounded-lg overflow-hidden border ${
+              darkMode ? 'border-gray-700' : 'border-gray-200'
             }`}>
               <CodeHighlighter 
                 code={solution[language]} 
@@ -138,15 +196,15 @@ const ProblemModal = ({ problem, solution, language, notes, darkMode, onClose, o
               />
             </div>
             
-            <div className="mt-6 space-y-4">
-              <div>
+            <div className="space-y-6">
+              <section>
                 <h3 className="text-lg font-semibold mb-2">Solution Explanation</h3>
                 <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
                   {solution.explanation}
                 </p>
-              </div>
+              </section>
               
-              <div>
+              <section>
                 <h3 className="text-lg font-semibold mb-2">Your Notes</h3>
                 <textarea
                   className={`w-full p-4 rounded-lg ${
@@ -159,11 +217,11 @@ const ProblemModal = ({ problem, solution, language, notes, darkMode, onClose, o
                   value={notes || ''}
                   onChange={(e) => onSaveNotes(problem.id, e.target.value)}
                 />
-              </div>
+              </section>
               
-              <div>
+              <section>
                 <h3 className="text-lg font-semibold mb-2">Rate Your Understanding</h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {[1, 2, 3, 4, 5].map(rating => (
                     <button
                       key={rating}
@@ -180,7 +238,7 @@ const ProblemModal = ({ problem, solution, language, notes, darkMode, onClose, o
                     </button>
                   ))}
                 </div>
-              </div>
+              </section>
             </div>
           </div>
         )}
