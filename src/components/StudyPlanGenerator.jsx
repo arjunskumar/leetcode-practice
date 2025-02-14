@@ -1,13 +1,19 @@
-// src/components/StudyPlanGenerator.jsx
-
 import React, { useState, useMemo } from 'react';
-import { Calendar, Clock, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Clock, BookOpen, ChevronDown, ChevronUp, Brain, Target, BarChart2 } from 'lucide-react';
 
 const StudyPlanGenerator = ({ problems, darkMode }) => {
   const [targetDate, setTargetDate] = useState('');
   const [weeklyHours, setWeeklyHours] = useState(10);
   const [selectedPatterns, setSelectedPatterns] = useState([]);
   const [showPlan, setShowPlan] = useState(false);
+  const [skillLevel, setSkillLevel] = useState('intermediate');
+  const [learningStyle, setLearningStyle] = useState('balanced');
+  const [dailyGoal, setDailyGoal] = useState(2);
+  const [selectedDifficulties, setSelectedDifficulties] = useState({
+    Easy: true,
+    Medium: true,
+    Hard: false
+  });
 
   // Get unique patterns from problems
   const patterns = useMemo(() => {
@@ -23,46 +29,78 @@ const StudyPlanGenerator = ({ problems, darkMode }) => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
   }, [targetDate]);
 
-  // Generate study plan
+  // Generate study plan based on preferences
   const studyPlan = useMemo(() => {
     if (!targetDate || selectedPatterns.length === 0) return [];
 
+    // Filter problems based on selected patterns and difficulties
     const filteredProblems = problems.filter(p => 
-      selectedPatterns.includes(p.pattern) && !p.completed
+      selectedPatterns.includes(p.pattern) && 
+      !p.completed &&
+      selectedDifficulties[p.difficulty]
     );
 
-    // Sort problems by difficulty
+    // Adjust problem selection based on skill level and learning style
     const sortedProblems = [...filteredProblems].sort((a, b) => {
       const difficultyScore = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
-      return difficultyScore[a.difficulty] - difficultyScore[b.difficulty];
+      
+      // Adjust scores based on skill level
+      let aScore = difficultyScore[a.difficulty];
+      let bScore = difficultyScore[b.difficulty];
+      
+      if (skillLevel === 'beginner') {
+        aScore *= a.difficulty === 'Easy' ? 0.8 : 1.2;
+        bScore *= b.difficulty === 'Easy' ? 0.8 : 1.2;
+      } else if (skillLevel === 'advanced') {
+        aScore *= a.difficulty === 'Hard' ? 0.8 : 1.2;
+        bScore *= b.difficulty === 'Hard' ? 0.8 : 1.2;
+      }
+
+      return aScore - bScore;
     });
 
-    // Estimate time per difficulty
-    const timeEstimates = {
-      'Easy': 30,    // 30 minutes
-      'Medium': 45,  // 45 minutes
-      'Hard': 60     // 60 minutes
+    // Estimate time per difficulty and learning style
+    const baseTimeEstimates = {
+      'Easy': 30,
+      'Medium': 45,
+      'Hard': 60
     };
 
-    // Calculate problems per week based on time commitment
-    const minutesPerWeek = weeklyHours * 60;
-    const problemsPerWeek = Math.floor(minutesPerWeek / 45); // Average time per problem
+    const timeEstimates = Object.entries(baseTimeEstimates).reduce((acc, [diff, time]) => {
+      let adjustedTime = time;
+      if (learningStyle === 'theory-focused') {
+        adjustedTime *= 1.2; // More time for theoretical understanding
+      } else if (learningStyle === 'practice-focused') {
+        adjustedTime *= 0.8; // Less time, more problems
+      }
+      acc[diff] = adjustedTime;
+      return acc;
+    }, {});
 
-    // Distribute problems across weeks
+    // Calculate problems per week based on daily goal
+    const problemsPerWeek = dailyGoal * 7;
     const weeks = [];
     let problemIndex = 0;
 
     for (let week = 0; week < weeksUntilTarget && problemIndex < sortedProblems.length; week++) {
       const weekProblems = [];
       let weekMinutes = 0;
+      let problemCount = 0;
 
-      while (weekMinutes < minutesPerWeek && problemIndex < sortedProblems.length) {
+      while (problemCount < problemsPerWeek && problemIndex < sortedProblems.length) {
         const problem = sortedProblems[problemIndex];
         const problemTime = timeEstimates[problem.difficulty];
 
-        if (weekMinutes + problemTime <= minutesPerWeek) {
-          weekProblems.push(problem);
+        if (weekMinutes + problemTime <= weeklyHours * 60) {
+          weekProblems.push({
+            ...problem,
+            estimatedTime: problemTime,
+            learningFocus: learningStyle === 'theory-focused' ? 'Understand the concept deeply' :
+                          learningStyle === 'practice-focused' ? 'Focus on implementation' :
+                          'Balance theory and practice'
+          });
           weekMinutes += problemTime;
+          problemCount++;
           problemIndex++;
         } else {
           break;
@@ -77,7 +115,14 @@ const StudyPlanGenerator = ({ problems, darkMode }) => {
     }
 
     return weeks;
-  }, [problems, selectedPatterns, targetDate, weeklyHours, weeksUntilTarget]);
+  }, [problems, selectedPatterns, targetDate, weeklyHours, skillLevel, learningStyle, dailyGoal, selectedDifficulties]);
+
+  const toggleDifficulty = (difficulty) => {
+    setSelectedDifficulties(prev => ({
+      ...prev,
+      [difficulty]: !prev[difficulty]
+    }));
+  };
 
   const togglePattern = (pattern) => {
     setSelectedPatterns(prev => 
@@ -91,7 +136,7 @@ const StudyPlanGenerator = ({ problems, darkMode }) => {
     <div className={`w-full rounded-lg shadow-lg ${darkMode ? 'bg-gray-800 text-white' : 'bg-white'}`}>
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Study Plan Generator</h2>
+          <h2 className="text-2xl font-bold">Personalized Study Plan Generator</h2>
           <button
             onClick={() => setShowPlan(!showPlan)}
             className="text-sm hover:opacity-80 transition-opacity"
@@ -104,6 +149,98 @@ const StudyPlanGenerator = ({ problems, darkMode }) => {
       {showPlan && (
         <div className="p-6">
           <div className="space-y-6">
+            {/* Skill Level Selection */}
+            <div>
+              <label className="block mb-2 font-medium">Your Skill Level</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['beginner', 'intermediate', 'advanced'].map(level => (
+                  <button
+                    key={level}
+                    onClick={() => setSkillLevel(level)}
+                    className={`p-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+                      skillLevel === level
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : darkMode
+                          ? 'bg-gray-700 border-gray-600 hover:bg-gray-600'
+                          : 'bg-gray-100 border-gray-200 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Brain className="h-4 w-4" />
+                    <span className="capitalize">{level}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Learning Style Selection */}
+            <div>
+              <label className="block mb-2 font-medium">Learning Style Preference</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['theory-focused', 'balanced', 'practice-focused'].map(style => (
+                  <button
+                    key={style}
+                    onClick={() => setLearningStyle(style)}
+                    className={`p-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+                      learningStyle === style
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : darkMode
+                          ? 'bg-gray-700 border-gray-600 hover:bg-gray-600'
+                          : 'bg-gray-100 border-gray-200 hover:bg-gray-200'
+                    }`}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    <span className="capitalize">{style.replace('-', ' ')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Difficulty Selection */}
+            <div>
+              <label className="block mb-2 font-medium">Problem Difficulties</label>
+              <div className="flex gap-2">
+                {Object.entries(selectedDifficulties).map(([difficulty, isSelected]) => (
+                  <button
+                    key={difficulty}
+                    onClick={() => toggleDifficulty(difficulty)}
+                    className={`px-4 py-2 rounded-lg border transition-colors ${
+                      isSelected
+                        ? difficulty === 'Easy'
+                          ? 'bg-green-500 text-white border-green-600'
+                          : difficulty === 'Medium'
+                            ? 'bg-yellow-500 text-white border-yellow-600'
+                            : 'bg-red-500 text-white border-red-600'
+                        : darkMode
+                          ? 'bg-gray-700 border-gray-600 hover:bg-gray-600'
+                          : 'bg-gray-100 border-gray-200 hover:bg-gray-200'
+                    }`}
+                  >
+                    {difficulty}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Daily Goal Setting */}
+            <div>
+              <label className="block mb-2 font-medium">Daily Problem Goal</label>
+              <div className="relative">
+                <Target className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={dailyGoal}
+                  onChange={(e) => setDailyGoal(Number(e.target.value))}
+                  className={`pl-10 w-full p-2 rounded-lg border ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600 text-white' 
+                      : 'bg-white border-gray-300'
+                  }`}
+                />
+              </div>
+            </div>
+
             {/* Target Date Input */}
             <div>
               <label className="block mb-2 font-medium">Target Completion Date</label>
@@ -165,10 +302,10 @@ const StudyPlanGenerator = ({ problems, darkMode }) => {
               </div>
             </div>
 
-            {/* Generated Plan */}
-            {studyPlan.length > 0 && (
+{/* Generated Plan */}
+{studyPlan.length > 0 && (
               <div className="mt-8">
-                <h3 className="text-xl font-bold mb-4">Your Study Plan</h3>
+                <h3 className="text-xl font-bold mb-4">Your Personalized Study Plan</h3>
                 <div className="space-y-4">
                   {studyPlan.map(week => (
                     <div
@@ -184,11 +321,11 @@ const StudyPlanGenerator = ({ problems, darkMode }) => {
                         {week.problems.map(problem => (
                           <li
                             key={problem.id}
-                            className="flex items-center justify-between"
+                            className="flex flex-col gap-1 p-2 rounded bg-opacity-50"
                           >
-                            <span>
-                              {problem.title}
-                              <span className={`ml-2 text-sm px-2 py-0.5 rounded ${
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{problem.title}</span>
+                              <span className={`text-sm px-2 py-0.5 rounded ${
                                 problem.difficulty === 'Easy'
                                   ? 'bg-green-100 text-green-800'
                                   : problem.difficulty === 'Medium'
@@ -197,10 +334,12 @@ const StudyPlanGenerator = ({ problems, darkMode }) => {
                               }`}>
                                 {problem.difficulty}
                               </span>
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {problem.pattern}
-                            </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span>{problem.pattern}</span>
+                              <span>~{problem.estimatedTime} mins</span>
+                            </div>
+                            <span className="text-sm text-gray-500">{problem.learningFocus}</span>
                           </li>
                         ))}
                       </ul>
